@@ -2,7 +2,7 @@ import nfl_data_py as nfl
 import pandas as pd
 
 raw = nfl.import_weekly_data(
-    years = [x for x in range(1999,2024)],
+    years = [x for x in range(1999,2025)],
     columns = ['player_id', 'player_name', 'position',
        'position_group', 'recent_team', 'season', 'week',
        'season_type', 'opponent_team',
@@ -75,7 +75,7 @@ overall = overall.drop(columns=['fantasy_points_ppr','week_total'])
 # fill missing standard deviations with -1 (right now no filling is done)
 # overall = overall.fillna({'std_dev': -1})
 # Save the tables to CSV files
-identity.to_csv('player_identity.csv', index=False)
-weekly.to_csv('weekly_stats.csv', index=False)
-yearly.to_csv('yearly_stats.csv', index=False)
-overall.to_csv('overall_stats.csv', index=False)
+identity.to_csv('data/player_identity.csv', index=False)
+weekly.to_csv('data/weekly_stats.csv', index=False)
+yearly.to_csv('data/yearly_stats.csv', index=False)
+overall.to_csv('data/overall_stats.csv', index=False)
