@@ -24,6 +24,8 @@ raw = raw[raw['position'].isin(['RB', 'QB', 'WR', 'TE', 'FB', 'K', 'HB'])]
 
 # Create table for player identity
 identity = raw[['player_id','player_name','position']].drop_duplicates().dropna(subset=['player_id','position']).reset_index(drop=True)
+identity[identity['position'] == 'FB'] = 'RB'
+identity[identity['position'] == 'HB'] = 'RB'
 
 # Create table for weekly stats
 weekly = raw[['player_id', 'recent_team', 'season', 'week', 'opponent_team',

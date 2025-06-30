@@ -1,4 +1,5 @@
-team_composition = {'QB': 1,
+team_composition = {
+    'QB': 1,
     'RB': 2,
     'WR': 2,
     'TE': 1,
