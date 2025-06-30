@@ -8,10 +8,10 @@ team_composition = {
     'K': 1,
     'DST' : 1
 }
-TEAM_SIZE = 8
+TEAMS = 8
 # Last reasonable player to be rostered for each position
 # Divide by 2 to get last reasonable player starting
-def last_pos(pos,teams=TEAM_SIZE):
+def last_pos(pos,teams=TEAMS):
     last_player = -0.5
     if pos == 'RB' or pos == 'WR' or pos == 'TE':
         last_player = team_composition[pos]*teams + team_composition['FLEX']*teams*0.5 + team_composition['SFLEX']*teams*0.2

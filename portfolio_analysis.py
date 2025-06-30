@@ -1,5 +1,5 @@
 import pandas as pd
-from assumptions import last_pos
+from assumptions import last_pos, TEAMS, team_composition
 def load_data():
     # Load the data from CSV files
     identity = pd.read_csv('data/player_identity.csv')
@@ -34,6 +34,34 @@ def par(data, replacement):
     data = data.drop(columns=['ppg_replacement']) 
     return data[['player_id', 'player_name','season', 'position', 'ppg', 'par']].sort_values(by=['season', 'par'], ascending=[False, False]).reset_index(drop=True)
 
+# Simulate a draft based on the points above replacement
+def sim_draft(teams,par_data):
+    team_counter = {'QB':0, 'RB':0, 'WR':0,'TE':0}
+    counters = []
+    rosters = []
+    for _ in range(teams):
+        counters.append(team_counter.copy())
+        rosters.append([])
+    rounds = team_composition['QB'] + team_composition['RB'] + team_composition['WR'] + team_composition['TE']
+    for _ in range(rounds):
+        for team in range(teams):
+            # Find next best player
+            no_pick = True
+            pointer = 0
+            while no_pick:
+                next_pick = par_data.iloc[pointer]
+                if counters[team][next_pick['position']] < team_composition[next_pick['position']]:
+                    no_pick = False
+                    counters[team][next_pick['position']] += 1
+                    rosters[team].append(next_pick['player_id'])
+                    print(f"Team {team} picks {next_pick['player_name']}")
+                    par_data = par_data.drop(index=pointer)
+                    par_data = par_data.reset_index(drop=True)
+                else:
+                    pointer += 1
+    return rosters
+
+
 
 def main():
     identity, weekly, yearly, overall = load_data()
@@ -47,6 +75,8 @@ def main():
     file = open('data/points_above_replacement.csv', 'w')
     file.write(par_results.to_csv(index=False))
     file.close()
+
+    print(sim_draft(2,par_results))
 
 if __name__ == "__main__":
     main() 
