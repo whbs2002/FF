@@ -1,5 +1,4 @@
 # Interesting but not very useful information
-
 import pandas as pd
 
 def load_data():
@@ -10,7 +9,6 @@ def load_data():
     overall = pd.read_csv('data/overall_stats.csv')
     
     return identity, weekly, yearly, overall
-
 
 def main():
     identity, weekly, yearly, overall = load_data()
