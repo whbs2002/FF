@@ -125,6 +125,19 @@ def graph_season(teams):
     fig = px.line(teams,x='week', y=teams.columns[1:], title='Fantasy Points per Week')
     fig.write_image('figures/per_week.png')
 
+def var_test():
+    rng = np.random.default_rng()
+    alpha = 3
+    u2 = 0.0
+    u1 = u2 + alpha
+    e = 200
+    s1 = 2
+    s2 = e*s1*s1
+    primary = rng.normal(u1,s1*s1,10000)
+    secondary = rng.normal(u2,s2,10000)
+    wins = secondary>primary
+    print(np.sum(wins))
+
 def main():
     identity, weekly, yearly, overall = load_data()
     overall = overall.merge(identity, on='player_id', how='left')
@@ -149,6 +162,5 @@ def main():
     fig = px.scatter(outcomes,x='variance',y='wins')
     fig.write_image('figures/E-V.png')
     
-
 if __name__ == "__main__":
-    main() 
+    var_test() 
