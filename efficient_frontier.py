@@ -1,6 +1,7 @@
 import pandas as pd
 from assumptions import last_pos, TEAMS, team_composition
 import plotly.express as px
+import plotly.graph_objects as go
 import numpy as np
 import random
 import time
@@ -126,17 +127,24 @@ def graph_season(teams):
     fig.write_image('figures/per_week.png')
 
 def var_test():
+    SIZE = 1000
+    SAMPLES = 10000
     rng = np.random.default_rng()
-    alpha = 3
-    u2 = 0.0
-    u1 = u2 + alpha
-    e = 200
-    s1 = 2
-    s2 = e*s1*s1
-    primary = rng.normal(u1,s1*s1,10000)
-    secondary = rng.normal(u2,s2,10000)
-    wins = secondary>primary
-    print(np.sum(wins))
+    alpha = np.random.uniform(low=-2.5,high=2.5,size=SIZE)
+    u1 = 0
+    u2 = np.reshape(u1 + alpha,(SIZE,1))
+    e = np.random.uniform(low=1,high=100,size=SIZE)
+    v1 = 1
+    v2 = np.reshape(e*v1,(SIZE,1))
+    primary = rng.normal(u1,np.sqrt(v1),(SIZE,SAMPLES))
+    secondary = rng.normal(u2,np.sqrt(v2),(SIZE,SAMPLES))
+    wins = np.sum(secondary>primary,axis=1)
+    data = pd.DataFrame({'alpha':alpha,'e':e,'wins':wins})
+    fig = px.scatter(data,x='alpha',y='e',color='wins')
+    fig.write_image('figures/var_test.png')
+    fig3D = px.scatter_3d(data,x='alpha',y='e',z='wins',color='wins')
+    fig3D.write_html('figures/3d.html')
+    fig3D.write_image('figures/3d_var_test.png')
 
 def main():
     identity, weekly, yearly, overall = load_data()
@@ -159,8 +167,8 @@ def main():
         p.extend(total_points(rosters,weekly,season))
         w.extend(find_wins(sim_season(rosters,weekly,season)))
     outcomes = pd.DataFrame({"points":p,"variance":v,"wins":w})
-    fig = px.scatter(outcomes,x='variance',y='wins')
+    fig = px.scatter(outcomes,x='points',y='wins',color='variance')
     fig.write_image('figures/E-V.png')
     
 if __name__ == "__main__":
-    var_test() 
+    var_test()
