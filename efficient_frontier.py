@@ -127,7 +127,7 @@ def graph_season(teams):
     fig.write_image('figures/per_week.png')
 
 def var_test():
-    SIZE = 1000
+    SIZE = 10000
     SAMPLES = 10000
     rng = np.random.default_rng()
     alpha = np.random.uniform(low=-2.5,high=2.5,size=SIZE)
