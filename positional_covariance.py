@@ -44,22 +44,27 @@ def par(data, replacement):
 
 # narrow down to WR1, WR2, TE1, RB1, RB2, QB1 and rename positions to match
 def trim_players(data):
-    data = (data
+    data['rank'] = (data
             .groupby(['season','position','recent_team'])['ppg']
-            .nlargest(2))
+            .rank(method='first',ascending=False)
+            .astype('Int64'))
+    
+    data['position']= data['position'] + data['rank'].astype(str)
+    data.drop(columns='rank')
+    data = data[data.position.isin(['QB1','TE1','RB1','RB2','WR1','WR2'])]
     return data
 
 # Group positions together
 def groups(yearly,weekly,identity,overall):
-    weekly = weekly[['player_id','week','fantasy_points_ppr']]
+    weekly = weekly[['player_id','week','fantasy_points_ppr','season']]
     yearly = yearly[['player_id','season','recent_team']]
-    overall = overall[['player_id','ppg']]
+    overall = overall[['player_id','ppg','season']]
     #identify relevant players
     data = yearly.merge(identity,on='player_id',how='left')
-    data = data.merge(overall,on='player_id',how='left')
-    print(data)
+    data = pd.merge(left=data,right=overall,how='left',right_on=['player_id','season'],left_on=['player_id','season'])
     data = trim_players(data)
-    print(data)
+    data = pd.merge(left=data,right=weekly,how='left',right_on=['player_id','season'],left_on=['player_id','season'])
+    return data
 
 
 # returns the index of the team that won each week
@@ -75,6 +80,23 @@ def sim_season(rosters, weekly,season=2024):
         teams = teams.merge(team_weekly, on='week', how='left')
         team_num += 1
     return teams.sort_values(by='week').set_index('week')
+
+# positions is tuple of two positions to compare
+def pos_variance(top_players,positions):
+    p_1,p_2 = positions
+    top_players = top_players[['player_id','season','week','fantasy_points_ppr','position','recent_team']]
+    top_players = top_players[top_players.position.isin(positions)]
+    variances = []
+    for season in range(2002,2025):
+        season_data = top_players[top_players.season == season].reset_index(drop=True)
+        season_data = season_data.pivot_table(index=['recent_team','week'],columns='position',values='fantasy_points_ppr')
+        v = (season_data
+             .groupby(['recent_team'])
+             .apply(lambda x: x[p_1].corr(x[p_2]))
+             .agg('mean'))
+        variances.append(v)
+    # average of averages is okay b/c NFL has 32 teams every year
+    return np.mean(np.array(variances))
 
 # each team is a list of player ids
 def team_variance(teams,weekly,season=2024):
@@ -112,7 +134,13 @@ def graph_season(teams):
 
 def main():
     identity, weekly, yearly, overall = load_data()
-    groups(yearly,weekly,identity,overall)
+    top_players = groups(yearly,weekly,identity,overall)
+    pos = ['QB1','TE1','RB1','RB2','WR1','WR2']
+    pos_combinations = itertools.combinations(pos,2)
+    
+    for c in pos_combinations:
+        print(c)
+        print(pos_variance(top_players,(c[0],c[1])))
     
 if __name__ == "__main__":
     main()
