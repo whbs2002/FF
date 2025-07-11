@@ -106,7 +106,7 @@ def team_variance(teams,weekly,season=2024):
         variances.append(var)
     return variances
 
-# Model wins as above or below mean points for the week
+# Model wins as number of other teams beaten that week
 def find_wins(teams):
     scores = teams.values
     wins_matrix = (scores[:, :, None] > scores[:, None, :]).sum(axis=2)
