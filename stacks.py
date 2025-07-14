@@ -3,6 +3,7 @@ from assumptions import last_pos, TEAMS, team_composition
 import plotly.express as px
 import time
 import itertools
+import numpy as np
 
 
 def load_data():
@@ -54,16 +55,20 @@ def sim_season(rosters, weekly,season=2024):
     return teams.sort_values(by='week').set_index('week')
 
 # Finds the all the stacks across a season
-def all_stacks(top_players, positions, season=2024):
-    top_players = top_players[top_players['season']==2024]
+def all_stacks(top_players, positions, season=2024,qb_limit=32):
+    top_players = top_players[top_players['season']==season]
     top_players = top_players[top_players.position.isin(positions)]
-    top_players = top_players[['recent_team','player_id','position']].drop_duplicates().reset_index(drop=True)
+    top_players = top_players[['recent_team','player_id','position','ppg']].drop_duplicates().sort_values(by='position',ascending=True).reset_index(drop=True)
+    if 'QB1' in positions:
+        mask = top_players['position'] != 'QB1'
+        top_qbs = top_players[top_players['position']=='QB1'].nlargest(qb_limit,'ppg')
+        top_players = pd.concat((top_players[mask],top_qbs)).sort_index()
     teams = top_players.groupby(['recent_team'])['player_id'].apply(lambda x: tuple(x)).tolist()
     return teams
     
 # list of all players at a given position in a season
 def all_position(top_players, position, season=2024):
-    top_players = top_players[top_players['season']==2024]
+    top_players = top_players[top_players['season']==season]
     top_players = top_players[top_players.position==position]
     return list(top_players['player_id'].drop_duplicates())
 
@@ -72,7 +77,6 @@ def find_wins(teams):
     scores = teams.values
     wins_matrix = (scores[:, :, None] > scores[:, None, :]).sum(axis=2)
     wins = pd.DataFrame(wins_matrix,index=teams.index,columns=teams.columns)
-    print(wins)
     sum_wins = wins.sum(axis=0)
     return list(sum_wins)
 
@@ -83,11 +87,51 @@ def all_pairs(top_players, positions,yearly,season=2024):
     yearly = yearly[yearly['season']==season].drop_duplicates().fillna(0.0).set_index('player_id')
     for pairing in itertools.product(qbs,wrs):
         A = yearly.loc[pairing[0]]['fantasy_points_ppr']
-        B= yearly.loc[pairing[1]]['fantasy_points_ppr']
+        B = yearly.loc[pairing[1]]['fantasy_points_ppr']
         points = A+B
         all_pairings.append([pairing[0],pairing[1],points])
-    all_pairings = pd.DataFrame(data=all_pairings,columns=['QB','WR','points'])
+    all_pairings = pd.DataFrame(data=all_pairings,columns=['QB','WR','points']).sort_values(by='points',ascending=False).reset_index(drop=True)
     return all_pairings
+
+# compare stacks to other QB-WR pairings
+# neighbors measures how many other pairings in each direction should be used for comparison
+def compare_stacks(stacks,pairings,weekly,season=2024,neighbors=3):
+    stack_performance = []
+    s_loc = []
+    for s in stacks:
+        # identify location of stack
+        location = pairings.index[(pairings['QB'] == s[0]) & (pairings['WR'] == s[1])][0]
+        s_loc.append(location)
+    for i in range(len(stacks)):
+        rank = pairings.shape[0]
+        # Find neighboring non-stack neighbors
+        s = stacks[i]
+        idx = s_loc[i]
+        after = min(2,rank-idx-1)
+        before = min(neighbors,idx)
+        # If we don't have enough on one side, compensate on the other
+        remaining = neighbors*2 - (before + after)
+        if remaining > 0:
+            # Try to take more from after side
+            extra_after = min(remaining, rank - idx - 1 - after)
+            after += extra_after
+            remaining -= extra_after
+            # Whatever is left must come from before side
+            extra_before = min(remaining, idx - before)
+            before += extra_before
+        nbors = []
+        for i in range(1,before+1):
+            nbors.append((pairings.iloc[idx-i]['QB'],pairings.iloc[idx-i]['WR']))
+        for i in range(1,after+1):
+            nbors.append((pairings.iloc[idx+i]['QB'],pairings.iloc[idx+i]['WR']))
+        # Calculate wins
+        wins = 0
+        for N in nbors:
+            result = sim_season([N,s],weekly,season).values
+            wins += np.mean(result[:,1]>result[:,0])/(neighbors*2)
+        # Add to the list
+        stack_performance.append([s[0],s[1],wins])
+    return stack_performance
 
 def find_winner(teams):
         return teams.groupby('week').apply(lambda x: x.idxmax(axis=1)).rename('winner').reset_index(drop=True)
@@ -100,12 +144,22 @@ def main():
     identity, weekly, yearly, overall = load_data()
     identity, weekly, yearly, overall = load_data()
     top_players = groups(yearly,weekly,identity,overall)
-    # Iterate through every QB1 WR1 pairings and find total points
-    SZN = 2023
-    stacks = all_stacks(top_players, ('QB1','WR1'),season=SZN)
-    all_pairings = all_pairs(top_players,('QB1','WR1'), yearly, season=SZN)
-    print(all_pairings)
-    # Compare QB WR1 stacks with adjacent non-stack pairings
+    # Iterate through every QB1 WR1 pairings and find wins
+    wins = []
+    for szn in range(2002,2025):
+        stacks = all_stacks(top_players, ('QB1','WR1'),season=szn,qb_limit=12)
+        # get rid of all the tuples with just a WR in them. This line in unnecessary if qb_limit is 32
+        stacks = [s for s in stacks if len(s)>1]
+        all_pairings = all_pairs(top_players,('QB1','WR1'), yearly, season=szn)
     
+        # Compare QB WR1 stacks with adjacent non-stack pairings
+        #TODO: do a t-test for these outcomes
+        outcome = compare_stacks(stacks,all_pairings,weekly,season=szn)
+        outcome = pd.DataFrame(data=outcome,columns=['QB','WR','wins']).sort_values(by='wins',ascending=False).reset_index(drop=True)
+        wins.append(outcome['wins'].agg('mean'))
+    print(wins)
+    print(np.mean(np.array(wins)))
+
+
 if __name__ == "__main__":
     main()
