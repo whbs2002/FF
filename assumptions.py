@@ -8,7 +8,7 @@ team_composition = {
     'K': 1,
     'DST' : 1
 }
-TEAMS = 8
+TEAMS = 10
 # Last reasonable player to be rostered for each position
 # Divide by 2 to get last reasonable player starting
 def last_pos(pos,teams=TEAMS):

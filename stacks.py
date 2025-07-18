@@ -95,7 +95,7 @@ def all_pairs(top_players, positions,yearly,season=2024):
 
 # compare stacks to other QB-WR pairings
 # neighbors measures how many other pairings in each direction should be used for comparison
-def compare_stacks(stacks,pairings,weekly,season=2024,neighbors=3):
+def compare_stacks(stacks,pairings,weekly,season=2024,neighbors=3,side="two"):
     stack_performance = []
     s_loc = []
     for s in stacks:
@@ -120,15 +120,43 @@ def compare_stacks(stacks,pairings,weekly,season=2024,neighbors=3):
             extra_before = min(remaining, idx - before)
             before += extra_before
         nbors = []
-        for i in range(1,before+1):
-            nbors.append((pairings.iloc[idx-i]['QB'],pairings.iloc[idx-i]['WR']))
-        for i in range(1,after+1):
-            nbors.append((pairings.iloc[idx+i]['QB'],pairings.iloc[idx+i]['WR']))
+        opponents = 0
+        if side != "bot":
+            for i in range(1,before+1):
+                nbors.append((pairings.iloc[idx-i]['QB'],pairings.iloc[idx-i]['WR']))
+                opponents +=1
+        if side != "top":
+            for i in range(1,after+1):
+                nbors.append((pairings.iloc[idx+i]['QB'],pairings.iloc[idx+i]['WR']))
+                opponents +=1
         # Calculate wins
         wins = 0
         for N in nbors:
             result = sim_season([N,s],weekly,season).values
-            wins += np.mean(result[:,1]>result[:,0])/(neighbors*2)
+            wins += np.mean(result[:,1]>result[:,0])/(opponents)
+        # Add to the list
+        stack_performance.append([s[0],s[1],wins])
+    return stack_performance
+
+def compare_top_n(stacks,pairings,weekly,n=5,season=2024):
+    stack_performance = []
+    s_loc = []
+    for s in stacks:
+        # identify location of stack
+        location = pairings.index[(pairings['QB'] == s[0]) & (pairings['WR'] == s[1])][0]
+        s_loc.append(location)
+    # find the best n pairings
+    top = []
+    for i in range(n):
+        top.append((pairings.iloc[i]['QB'],pairings.iloc[i]['WR']))
+    for i in range(len(stacks)):
+        # Find neighboring non-stack neighbors
+        s = stacks[i]
+        # Calculate wins
+        wins = 0
+        for N in top:
+            result = sim_season([N,s],weekly,season).values
+            wins += np.mean(result[:,1]>result[:,0])/(n)
         # Add to the list
         stack_performance.append([s[0],s[1],wins])
     return stack_performance
@@ -140,26 +168,78 @@ def graph_season(teams):
     fig = px.line(teams,x='week', y=teams.columns[1:], title='Fantasy Points per Week')
     fig.write_image('figures/per_week.png')
 
-def main():
+# return n random pairings as tuples with QB first and WR second
+def random_pairings(pairings,n):
+    pairing_indices = np.random.choice(np.arange(10,pairings.shape[0],1), size=n, replace=False)
+    return pairings.iloc[pairing_indices][['QB','WR']].apply(lambda x: tuple(x),axis=1).tolist()
+
+def exp_stacks():
     identity, weekly, yearly, overall = load_data()
     identity, weekly, yearly, overall = load_data()
     top_players = groups(yearly,weekly,identity,overall)
     # Iterate through every QB1 WR1 pairings and find wins
     wins = []
     for szn in range(2002,2025):
-        stacks = all_stacks(top_players, ('QB1','WR1'),season=szn,qb_limit=12)
+        stacks = all_stacks(top_players, ('QB1','WR1'),season=szn,qb_limit=32)
         # get rid of all the tuples with just a WR in them. This line in unnecessary if qb_limit is 32
         stacks = [s for s in stacks if len(s)>1]
         all_pairings = all_pairs(top_players,('QB1','WR1'), yearly, season=szn)
-    
-        # Compare QB WR1 stacks with adjacent non-stack pairings
-        #TODO: do a t-test for these outcomes
-        outcome = compare_stacks(stacks,all_pairings,weekly,season=szn)
+        # Compare QB WR1 stacks with adjacent pairings
+        outcome = compare_stacks(stacks,all_pairings,weekly,season=szn,side="top")
+        outcome = pd.DataFrame(data=outcome,columns=['QB','WR','wins']).sort_values(by='wins',ascending=False).reset_index(drop=True)
+        wins.append(outcome['wins'].agg('mean'))
+    print(wins)
+    print(np.mean(np.array(wins)))
+
+def exp_random():
+    identity, weekly, yearly, overall = load_data()
+    identity, weekly, yearly, overall = load_data()
+    top_players = groups(yearly,weekly,identity,overall)
+    # Iterate through every QB1 WR1 pairings and find wins
+    wins = []
+    for szn in range(2002,2025):
+        all_pairings = all_pairs(top_players,('QB1','WR1'), yearly, season=szn)
+
+        #code for randomly selecting WR pairings
+        stacks = random_pairings(all_pairings,50)
+        # Compare QB WR1 stacks with adjacent pairings
+        outcome = compare_stacks(stacks,all_pairings,weekly,season=szn,side="top")
+        outcome = pd.DataFrame(data=outcome,columns=['QB','WR','wins']).sort_values(by='wins',ascending=False).reset_index(drop=True)
+        wins.append(outcome['wins'].agg('mean'))
+    print(wins)
+    print(np.mean(np.array(wins)))
+
+def exp_top():
+    identity, weekly, yearly, overall = load_data()
+    identity, weekly, yearly, overall = load_data()
+    top_players = groups(yearly,weekly,identity,overall)
+    # Iterate through every QB1 WR1 pairings and find wins
+    wins = []
+    for szn in range(2002,2025):
+        stacks = all_stacks(top_players, ('QB1','WR1'),season=szn,qb_limit=32)
+        # get rid of all the tuples with just a WR in them. This line in unnecessary if qb_limit is 32
+        stacks = [s for s in stacks if len(s)>1]
+        all_pairings = all_pairs(top_players,('QB1','WR1'), yearly, season=szn)
+
+        # Compare QB WR1 stacks with best pairings
+        outcome = compare_top_n(stacks,all_pairings,weekly,n=10,season=szn)
+        outcome = pd.DataFrame(data=outcome,columns=['QB','WR','wins']).sort_values(by='wins',ascending=False).reset_index(drop=True)
+        wins.append(outcome['wins'].agg('mean'))
+    print(wins)
+    print(np.mean(np.array(wins)))
+    wins = []
+    for szn in range(2002,2025):
+        all_pairings = all_pairs(top_players,('QB1','WR1'), yearly, season=szn)
+        #code for randomly selecting QB-WR pairings
+        stacks = random_pairings(all_pairings,50)
+        # Compare random pairings with best pairings
+        outcome = compare_top_n(stacks,all_pairings,weekly,n=10,season=szn)
         outcome = pd.DataFrame(data=outcome,columns=['QB','WR','wins']).sort_values(by='wins',ascending=False).reset_index(drop=True)
         wins.append(outcome['wins'].agg('mean'))
     print(wins)
     print(np.mean(np.array(wins)))
 
 
+
 if __name__ == "__main__":
-    main()
+    exp_top()

@@ -32,7 +32,7 @@ weekly = raw[['player_id', 'recent_team', 'season', 'week', 'opponent_team',
        'passing_yards', 'passing_tds', 'interceptions', 'sack_fumbles_lost',
        'passing_2pt_conversions', 'rushing_yards', 'rushing_tds', 'rushing_fumbles_lost',
        'rushing_2pt_conversions', 'receptions', 'receiving_yards', 'receiving_tds', 'receiving_fumbles_lost',
-       'receiving_2pt_conversions', 'fantasy_points_ppr']]
+       'receiving_2pt_conversions','fantasy_points', 'fantasy_points_ppr']]
 
 weekly['fumbles'] = weekly['sack_fumbles_lost'] + weekly['rushing_fumbles_lost'] + weekly['receiving_fumbles_lost']
 weekly = weekly.drop(columns=['sack_fumbles_lost', 'rushing_fumbles_lost','receiving_fumbles_lost'])
@@ -52,6 +52,7 @@ yearly = yearly.groupby(['player_id','season']).agg({
     'receptions':'sum',
     'receiving_yards':'sum',
     'receiving_tds':'sum',
+    'fantasy_points': 'sum',
     'fantasy_points_ppr':'sum',
     'fumbles':'sum',
     '2pt':'sum'

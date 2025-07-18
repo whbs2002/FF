@@ -107,8 +107,8 @@ def graph_season(teams):
     fig.write_image('figures/per_week.png')
 
 def find_non_maximal_team(maximal, par_data, weekly, season=2024):
-    BENCHMARK = 5
-    MULT = 2
+    BENCHMARK = 6
+    MULT = 4
     par_data = par_data[par_data['season'] == season].reset_index(drop=True)
     # Remove the players on the maximal team
     par_data = par_data[~par_data['player_id'].isin(maximal[0])].reset_index(drop=True)
@@ -150,7 +150,7 @@ def main():
     file = open('data/points_above_replacement.csv', 'w')
     file.write(par_results.to_csv(index=False))
     file.close()
-    SZN = 2024
+    SZN = 2020
     maximal = sim_draft(1, par_results, season=SZN, turns=True)
     find_non_maximal_team(maximal, par_results, weekly, season=SZN)
 
