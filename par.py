@@ -4,6 +4,7 @@ import plotly.express as px
 import plotly.figure_factory as ff
 import time
 import itertools
+COLORS = ['#F55E22','#F59C22','#1F659E','#17A86A']
 def load_data():
     # Load the data from CSV files
     identity = pd.read_csv('data/player_identity.csv')
@@ -44,8 +45,24 @@ def density_plots(groups, val_col, file_name):
     for name,group in groups:
         labels.append(name)
         data.append(group[val_col].to_numpy())
-    print(labels)
-    fig = ff.create_distplot(data,labels,bin_size=10)
+    fig = ff.create_distplot(data,labels,colors=COLORS,show_hist=False, bin_size=10)
+    fig.update_layout(
+        font=dict(size=20)
+    )
+    fig.update_xaxes(
+        mirror=True,
+        ticks='outside',
+        showline=True,
+        linecolor='black',
+        gridcolor='lightgrey'
+    )
+    fig.update_yaxes(
+        mirror=True,
+        ticks='outside',
+        showline=True,
+        linecolor='black',
+        gridcolor='lightgrey'
+    )
     fig.write_html(file_name)
     fig.write_image(file_name.replace('.html', '.png'))
 
@@ -113,11 +130,14 @@ def main():
     file = open('data/points_above_replacement.csv', 'w')
     file.write(par_results.to_csv(index=False))
     file.close()
-    #limits_hist(yearly,identity,type='ppr',limit=17.0)
-    #top_n_hist(yearly,identity,type='ppr')
-    #par_results['par'] = par_results['par']*17.0
-    #limits_hist(par_results,identity,type='par',limit=17.0)
-    #top_n_hist(par_results,identity,type='par')
+
+    limits_hist(yearly,identity,type='ppr',limit=17.0)
+    top_n_hist(yearly,identity,type='ppr')
+
+    par_results['par'] = par_results['par']*17.0
+    limits_hist(par_results,identity,type='par',limit=-100)
+    top_n_hist(par_results,identity,type='par')
+
     top_rounds_pos(par_results,rounds=2,years=(1999,2025))
 
 
