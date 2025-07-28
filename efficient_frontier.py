@@ -136,9 +136,9 @@ def var_test():
     e = np.random.uniform(low=1,high=100,size=SIZE)
     v1 = 1
     v2 = np.reshape(e*v1,(SIZE,1))
-    primary = rng.normal(u1,np.sqrt(v1),(SIZE,SAMPLES))
-    secondary = rng.normal(u2,np.sqrt(v2),(SIZE,SAMPLES))
-    wins = np.sum(secondary>primary,axis=1)
+    T1 = rng.normal(u1,np.sqrt(v1),(SIZE,SAMPLES))
+    T2 = rng.normal(u2,np.sqrt(v2),(SIZE,SAMPLES))
+    wins = np.sum(T2>T1,axis=1)
     data = pd.DataFrame({'alpha':alpha,'e':e,'wins':wins})
     fig = px.scatter(data,x='alpha',y='e',color='wins')
     fig.write_image('figures/var_test.png')
@@ -167,7 +167,7 @@ def main():
         p.extend(total_points(rosters,weekly,season))
         w.extend(find_wins(sim_season(rosters,weekly,season)))
     outcomes = pd.DataFrame({"points":p,"variance":v,"wins":w})
-    fig = px.scatter(outcomes,x='points',y='wins',color='variance')
+    fig = px.scatter(outcomes,x='variance',y='points',color='wins')
     fig.write_image('figures/E-V.png')
     
 if __name__ == "__main__":

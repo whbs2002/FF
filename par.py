@@ -4,7 +4,7 @@ import plotly.express as px
 import plotly.figure_factory as ff
 import time
 import itertools
-COLORS = ['#F55E22','#F59C22','#1F659E','#17A86A']
+COLORS = ['#1F659E','#F59C22','#17A86A','#F55E22']
 def load_data():
     # Load the data from CSV files
     identity = pd.read_csv('data/player_identity.csv')
@@ -115,8 +115,12 @@ def top_rounds_pos(stats,rounds=2,years=(2019,2025)):
     top = top.groupby(['season']).apply(lambda x: x.nlargest(n,'par')).reset_index(drop=True)
     top = top.groupby(['season'])['position'].value_counts()
     top = top.reset_index(name='count')
-    fig = px.area(top,x='season',y='count',color='position', line_group='position')
+    fig = px.area(top,x='season',y='count',color='position', color_discrete_map={'QB':COLORS[0], 'RB':COLORS[1], 'TE':COLORS[2],'WR':COLORS[3]}, line_group='position')
+    fig.update_layout(
+        font=dict(size=20)
+    )
     fig.write_image('figures/top_rounds_pos.png',width=1400,height=1000)
+    fig.write_html('figures/top_rounds_pos.html')
 
 def main():
     identity, weekly, yearly, overall = load_data()
@@ -135,7 +139,7 @@ def main():
     top_n_hist(yearly,identity,type='ppr')
 
     par_results['par'] = par_results['par']*17.0
-    limits_hist(par_results,identity,type='par',limit=-100)
+    limits_hist(par_results,identity,type='par',limit=-200)
     top_n_hist(par_results,identity,type='par')
 
     top_rounds_pos(par_results,rounds=2,years=(1999,2025))
