@@ -49,6 +49,7 @@ def scenario_four():
     print(outcome_A)
     print(outcome_B)
     print(outcome_C)
+    print(np.sum(B[:,0]))
     return 0
 
 def main():
