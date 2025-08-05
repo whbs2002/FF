@@ -2,6 +2,7 @@ import pandas as pd
 from assumptions import last_pos, TEAMS, team_composition
 import plotly.express as px
 import plotly.figure_factory as ff
+import numpy as np
 import time
 import itertools
 COLORS = ['#1F659E','#F59C22','#17A86A','#F55E22']
@@ -122,6 +123,22 @@ def top_rounds_pos(stats,rounds=2,years=(2019,2025)):
     fig.write_image('figures/top_rounds_pos.png',width=1400,height=1000)
     fig.write_html('figures/top_rounds_pos.html')
 
+def frequency_by_round(stats, years=(2019,2025)):
+    num_years = years[1] - years[0]
+    positions = ['QB','WR','RB','TE']
+    stats = stats[stats['season'].isin([i for i in range(years[0],years[1])])]
+    top = stats[stats['position'].isin(positions)]
+    top = top.sort_values(by=['par'],ascending=False)
+    top = top.groupby(np.arange(len(top)) // (TEAMS * num_years))
+    top = top['position'].value_counts().reset_index(name='count')
+    # Only keep the first 20 rounds
+    top = top[top['level_0']<20].reset_index(drop=True)
+    top.rename(columns={'level_0': 'round'}, inplace=True)
+    top['round'] = top['round'] + 1
+    fig = px.area(top,x='round',y='count',color='position', color_discrete_map={'QB':COLORS[0], 'RB':COLORS[1], 'TE':COLORS[2],'WR':COLORS[3]}, line_group='position')
+    fig.write_image('figures/freq_rounds.png',width=1400,height=1000)
+    fig.write_html('figures/freq_rounds.html')
+
 def main():
     identity, weekly, yearly, overall = load_data()
     overall = overall.merge(identity, on='player_id', how='left')
@@ -135,14 +152,15 @@ def main():
     file.write(par_results.to_csv(index=False))
     file.close()
 
-    limits_hist(yearly,identity,type='ppr',limit=17.0)
-    top_n_hist(yearly,identity,type='ppr')
+    frequency_by_round(par_results)
+    #limits_hist(yearly,identity,type='ppr',limit=17.0)
+    #top_n_hist(yearly,identity,type='ppr')
 
-    par_results['par'] = par_results['par']*17.0
-    limits_hist(par_results,identity,type='par',limit=-200)
-    top_n_hist(par_results,identity,type='par')
+    #par_results['par'] = par_results['par']*17.0
+    #limits_hist(par_results,identity,type='par',limit=-200)
+    #top_n_hist(par_results,identity,type='par')
 
-    top_rounds_pos(par_results,rounds=2,years=(1999,2025))
+    #top_rounds_pos(par_results,rounds=2,years=(1999,2025))
 
 
 
