@@ -1,3 +1,4 @@
+from random import random
 import pandas as pd
 from assumptions import last_pos, TEAMS, team_composition
 import plotly.express as px
@@ -100,7 +101,6 @@ def run_regressions(schedules, weekly, identity):
     player_performance(schedules,weekly,identity)
 
 def team_gen(size,total):
-    team = []
     rng = np.random.default_rng()
     slots = np.zeros(size,dtype=int)
     slots[1:] = np.sort(rng.integers(0,total,size=size-1))
@@ -114,29 +114,50 @@ def bye_simulation():
     WEEKS = 9
     SIZE = 9
     SCORE = 100
-    STACKS = 7
-    SIGMA = 5
-    team_0 = team_gen(SIZE,SCORE)
-    team_1 = team_gen(SIZE,SCORE)
+    TRIALS = 10000
+    SIGMA = 10
+    MIXED = True
+    SORT = True
     rng = np.random.default_rng()
-    bye_0 = np.arange(1, WEEKS + 1)
-    bye_1 = rng.choice(range(1, WEEKS + 1 - STACKS), SIZE, replace=True)
-    results_0 = rng.normal(team_0,SIGMA,size = (SIZE,WEEKS))
-    results_1 = rng.normal(team_1,SIGMA,size = (SIZE,WEEKS))
-    B = np.ones((SIZE,WEEKS))
-    B[np.arange(SIZE),bye_0-1] = 0
-    results_0 = results_0 * B
-    results_0 = results_0.sum(axis=0)
-    B = np.ones((SIZE,WEEKS))
-    B[np.arange(SIZE),bye_1-1] = 0
-    results_1 = results_1 * B
-    print(results_1)
-    results_1 = results_1.sum(axis=0)
-    print(results_0)
-    print(results_1)
-    win = results_1>results_0
-    print(bye_1)
-    print(win)
+    results = np.zeros((10000,WEEKS,WEEKS-1))
+    for i in range(0,WEEKS-1):
+        STACKS = i
+        bye_0 = np.arange(1, WEEKS + 1)
+        rng.shuffle(bye_0)
+        for ii in range(0,TRIALS):
+            if MIXED:
+                team_0 = team_gen(SIZE,SCORE)
+                team_1 = team_gen(SIZE,SCORE)
+                if SORT:
+                    team_0 = np.sort(team_0)
+                    team_1 = np.sort(team_1)
+            else:
+                team_0 = np.ones(SIZE)*(SCORE/SIZE)
+                team_1 = np.ones(SIZE)*(SCORE/SIZE)
+            bye_1 = np.zeros(WEEKS,dtype=int)
+            bye_1[0:WEEKS-STACKS] = np.arange(1,WEEKS-STACKS+1)
+            bye_1[WEEKS-STACKS:] = rng.choice(range(1,WEEKS-STACKS),STACKS, replace=True)
+            rng.shuffle(bye_1)
+
+            results_0 = rng.normal(team_0,SIGMA,size = (SIZE,WEEKS))
+            results_1 = rng.normal(team_1,SIGMA,size = (SIZE,WEEKS))
+            
+            B = np.ones((SIZE,WEEKS))
+            B[np.arange(SIZE),bye_0-1] = 0
+            results_0 = results_0 * B
+            results_0 = results_0.sum(axis=0)
+            
+            B = np.ones((SIZE,WEEKS))
+            B[np.arange(SIZE),bye_1-1] = 0
+            results_1 = results_1 * B
+            results_1 = results_1.sum(axis=0)
+            
+            results[ii,:,i]= results_1>results_0
+    print(np.sum(results,axis=0))
+    print(np.sum(results,axis=(0,1)))
+    fig = px.scatter(x=np.arange(0,WEEKS-1),y=np.sum(results,axis=(0,1)), labels={'x':'Number of stacked byes','y':'Total wins over 10,000 trials'},range_y=[(TRIALS*WEEKS)/2-TRIALS*0.5,(TRIALS*WEEKS)/2+TRIALS*0.5])
+    fig.add_hline(y=TRIALS*(WEEKS)/2, line_dash="dot")
+    fig.write_html('figures/bye_simulation.html')
     return 0
 
 def main():
