@@ -95,15 +95,57 @@ def player_performance(schedules, weekly,identity):
     fig.write_html('figures/good_player_scores.html')
     return 0
 
+def run_regressions(schedules, weekly, identity):
+    team_performance(schedules)
+    player_performance(schedules,weekly,identity)
 
+def team_gen(size,total):
+    team = []
+    rng = np.random.default_rng()
+    slots = np.zeros(size,dtype=int)
+    slots[1:] = np.sort(rng.integers(0,total,size=size-1))
+    baseline = np.zeros(size,dtype=int)
+    baseline[0:size-1] = slots[1:]
+    baseline[size-1] = total
+    vals = baseline-slots
+    return vals
 
+def bye_simulation():
+    WEEKS = 9
+    SIZE = 9
+    SCORE = 100
+    STACKS = 7
+    SIGMA = 5
+    team_0 = team_gen(SIZE,SCORE)
+    team_1 = team_gen(SIZE,SCORE)
+    rng = np.random.default_rng()
+    bye_0 = np.arange(1, WEEKS + 1)
+    bye_1 = rng.choice(range(1, WEEKS + 1 - STACKS), SIZE, replace=True)
+    results_0 = rng.normal(team_0,SIGMA,size = (SIZE,WEEKS))
+    results_1 = rng.normal(team_1,SIGMA,size = (SIZE,WEEKS))
+    B = np.ones((SIZE,WEEKS))
+    B[np.arange(SIZE),bye_0-1] = 0
+    results_0 = results_0 * B
+    results_0 = results_0.sum(axis=0)
+    B = np.ones((SIZE,WEEKS))
+    B[np.arange(SIZE),bye_1-1] = 0
+    results_1 = results_1 * B
+    print(results_1)
+    results_1 = results_1.sum(axis=0)
+    print(results_0)
+    print(results_1)
+    win = results_1>results_0
+    print(bye_1)
+    print(win)
+    return 0
 
 def main():
     identity, weekly, yearly, overall,schedules = load_data()
-    # 
-    team_performance(schedules)
-    player_performance(schedules, weekly,identity)
-    overall = overall.merge(identity, on='player_id', how='left')
+
+    #run_regressions(schedules, weekly, identity)
+    
+    #overall = overall.merge(identity, on='player_id', how='left')
+    bye_simulation()
 
 
 
