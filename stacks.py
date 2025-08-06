@@ -102,6 +102,8 @@ def compare_stacks(stacks,pairings,weekly,season=2024,neighbors=3,side="two"):
         # identify location of stack
         location = pairings.index[(pairings['QB'] == s[0]) & (pairings['WR'] == s[1])][0]
         s_loc.append(location)
+    extreme = 0
+    LEVEL = 10
     for i in range(len(stacks)):
         rank = pairings.shape[0]
         # Find neighboring non-stack neighbors
@@ -133,9 +135,13 @@ def compare_stacks(stacks,pairings,weekly,season=2024,neighbors=3,side="two"):
         wins = 0
         for N in nbors:
             result = sim_season([N,s],weekly,season).values
+            # calculate the occurrence of very good seasons
+            if np.sum(result[:,1]>result[:,0]) > LEVEL:
+                extreme += 1
             wins += np.mean(result[:,1]>result[:,0])/(opponents)
         # Add to the list
         stack_performance.append([s[0],s[1],wins])
+    print(extreme)
     return stack_performance
 
 def compare_top_n(stacks,pairings,weekly,n=5,season=2024):
@@ -188,7 +194,6 @@ def exp_stacks():
         outcome = compare_stacks(stacks,all_pairings,weekly,season=szn,side="top")
         outcome = pd.DataFrame(data=outcome,columns=['QB','WR','wins']).sort_values(by='wins',ascending=False).reset_index(drop=True)
         wins.append(outcome['wins'].agg('mean'))
-    print(wins)
     print(np.mean(np.array(wins)))
 
 def exp_random():
@@ -201,12 +206,11 @@ def exp_random():
         all_pairings = all_pairs(top_players,('QB1','WR1'), yearly, season=szn)
 
         #code for randomly selecting WR pairings
-        stacks = random_pairings(all_pairings,50)
+        stacks = random_pairings(all_pairings,32)
         # Compare QB WR1 stacks with adjacent pairings
         outcome = compare_stacks(stacks,all_pairings,weekly,season=szn,side="top")
         outcome = pd.DataFrame(data=outcome,columns=['QB','WR','wins']).sort_values(by='wins',ascending=False).reset_index(drop=True)
         wins.append(outcome['wins'].agg('mean'))
-    print(wins)
     print(np.mean(np.array(wins)))
 
 def exp_top():
@@ -225,7 +229,6 @@ def exp_top():
         outcome = compare_top_n(stacks,all_pairings,weekly,n=10,season=szn)
         outcome = pd.DataFrame(data=outcome,columns=['QB','WR','wins']).sort_values(by='wins',ascending=False).reset_index(drop=True)
         wins.append(outcome['wins'].agg('mean'))
-    print(wins)
     print(np.mean(np.array(wins)))
     wins = []
     for szn in range(2002,2025):
@@ -236,10 +239,10 @@ def exp_top():
         outcome = compare_top_n(stacks,all_pairings,weekly,n=10,season=szn)
         outcome = pd.DataFrame(data=outcome,columns=['QB','WR','wins']).sort_values(by='wins',ascending=False).reset_index(drop=True)
         wins.append(outcome['wins'].agg('mean'))
-    print(wins)
     print(np.mean(np.array(wins)))
 
 
-
 if __name__ == "__main__":
+    exp_stacks()
+    exp_random()
     exp_top()
