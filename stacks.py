@@ -242,7 +242,30 @@ def exp_top():
     print(np.mean(np.array(wins)))
 
 
+# positions is tuple of two positions to compare
+def pos_variance(top_players,positions):
+    p_1,p_2 = positions
+    top_players = top_players[['player_id','season','week','fantasy_points_ppr','position','recent_team']]
+    top_players = top_players[top_players.position.isin(positions)]
+    variances = []
+    for season in range(2002,2025):
+        season_data = top_players[top_players.season == season].reset_index(drop=True)
+        season_data = season_data.pivot_table(index=['recent_team','week'],columns='position',values='fantasy_points_ppr')
+        v = (season_data
+             .groupby(['recent_team'])
+             .apply(lambda x: x[p_1].corr(x[p_2]))
+             #.agg('mean')
+             )
+        variances.append(v)
+        print(v)
+    # average of averages is okay b/c NFL has 32 teams every year
+    return np.mean(np.array(variances))
+
+def main():
+    identity, weekly, yearly, overall = load_data()
+    top_players = groups(yearly,weekly,identity,overall)
+    pos = ('QB1','WR1')
+    print(pos_variance(top_players,pos))
+
 if __name__ == "__main__":
-    exp_stacks()
-    exp_random()
-    exp_top()
+    main()
